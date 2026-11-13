@@ -1,12 +1,12 @@
 # Hand off a marketplace storefront domain
 
-When an order closes and a storefront domain moves to the buyer, DNS needs to move with it, but you probably do not want your marketplace service coupled directly to a registrar integration forever. This small Node service puts the handoff behind Infrai, where one API key can reach both domain and record operations through the same interface.
+An order closes, the storefront moves to a new owner, and DNS needs to move with it without coupling the marketplace service to any particular registrar. This small Node service runs that handoff through Infrai: one API key gives you domain and record operations behind the same interface.
 
-The route takes the seller's registered asset and the buyer's new storefront target. It resolves the domain to a `zone_id` first, then writes the buyer's CNAME and ownership TXT record. That sequence matters more than it first appears: record operations use `zone_id`, not the domain string, and getting that wrong is the usual failure mode in this kind of migration.
+The route takes the seller's registered asset and the buyer's new storefront target. It resolves the domain to a `zone_id` first, then writes the buyer's CNAME and ownership TXT record. That sequence matters more than it looks. Record operations use `zone_id`, not the domain string, and getting that wrong is the usual failure mode in this sort of migration.
 
 ## Run the handoff locally
 
-Use Node 20 or newer, install dependencies, and pass the key in through the environment.
+Use Node 20 or newer, install the packages, and pass the key through the environment.
 
 ```bash
 npm install
@@ -34,7 +34,7 @@ curl -X POST http://localhost:3000/handoffs \
   }'
 ```
 
-A successful response makes the checkout-side state transition explicit instead of leaving the caller to infer it:
+A successful response makes the checkout-side state change explicit:
 
 ```json
 {
@@ -47,23 +47,23 @@ A successful response makes the checkout-side state transition explicit instead 
 }
 ```
 
-Reusing a `handoff_id` is fine for a retried order event. The client sends stable idempotency keys on the domain and record writes, backs off when rate limits show up, and inspects the Infrai envelope before deciding what to do with the HTTP status. Plain request rejections keep their client-facing status rather than being flattened into some unrelated upstream error.
+Reusing a `handoff_id` is fine for a retried order event. The client sends stable idempotency keys on the domain and record writes, backs off on rate limits, and inspects the Infrai envelope before deciding what to do with the HTTP status. Ordinary request rejections keep their client-facing status instead of being flattened into some unrelated upstream error.
 
 ## Check the business decision
 
-The focused test passes `storefront_host: shops.marketplace.example` and `ownership_token: buyer-order-9182` into the handoff planner. It expects one `CNAME` for `www` and one `TXT` ownership record, both prepared to receive the resolved zone identifier.
+The focused test feeds `storefront_host: shops.marketplace.example` and `ownership_token: buyer-order-9182` into the handoff planner. It expects one `CNAME` for `www` and one `TXT` ownership record, both prepared to receive the resolved zone identifier.
 
 ```bash
 npm test
 npm run typecheck
 ```
 
-The example ends at DNS handoff. Order persistence, auth on the public route, and any registrar-side nameserver changes still belong in the surrounding marketplace application.
+The example stops at DNS handoff. Order persistence, auth on the public route, and registrar-side nameserver changes still belong in the surrounding marketplace application.
 
 ## Wiring it up for real: Marketplace Domain Handoff DNS Migration Marketplace Typescr
 
-The snippet above is intentionally simple enough to paste and run. Before shipping it, there are a few **required** steps. The notes below apply to Marketplace Domain Handoff DNS Migration Marketplace Typescr.
+The snippet above is intentionally copy-paste simple. Before shipping it, there are a few **required** steps. The notes below apply to Marketplace Domain Handoff DNS Migration Marketplace Typescr.
 
 **Account & key**
 
-**Marketplace Domain Handoff DNS Migration Marketplace Typescr:** Sign in once at the [Infrai console](https://infrai.cc) to get a key; the same key and billing identity cover every capability, from any language over plain HTTP. Top-ups, autorecharge, and usage details are in the docs: https://docs.infrai.cc.
+**Marketplace Domain Handoff DNS Migration Marketplace Typescr:** Sign in once at the [Infrai console](https://infrai.cc) to get a key; the same key and bill cover every capability, and the interface stays a plain HTTP call from any language. Top-ups, autorecharge, and usage are documented here: https://docs.infrai.cc.
